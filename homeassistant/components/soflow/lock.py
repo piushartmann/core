@@ -79,12 +79,12 @@ class SoFlowLock(LockEntity):
                 ),
                 timeout=30,
             )
-            _LOGGER.debug("Lock command sent to SoFlow Scooter")
+            _LOGGER.debug("Lock command sent")
             # Update state optimistically
             data.is_locked = True
             self.async_write_ha_state()
         except (BleakError, asyncio.TimeoutError) as ex:
-            _LOGGER.error("Failed to lock SoFlow Scooter: %s", ex)
+            _LOGGER.error("Failed to lock: %s", ex)
             raise
 
     async def async_unlock(self, **kwargs: Any) -> None:
@@ -97,10 +97,10 @@ class SoFlowLock(LockEntity):
                 ),
                 timeout=30,
             )
-            _LOGGER.debug("Unlock command sent to SoFlow Scooter")
+            _LOGGER.debug("Unlock command sent")
             # Update state optimistically
             data.is_locked = False
             self.async_write_ha_state()
         except (BleakError, asyncio.TimeoutError) as ex:
-            _LOGGER.error("Failed to unlock SoFlow Scooter: %s", ex)
+            _LOGGER.error("Failed to unlock: %s", ex)
             raise

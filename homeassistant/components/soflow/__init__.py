@@ -23,6 +23,8 @@ from .const import (
     CONF_UNLOCK_PACKET,
     DEVICE_TIMEOUT,
     DOMAIN,
+    LOCK_STATUS_LOCKED,
+    LOCK_STATUS_UNLOCKED,
     NOTIFY_UUID,
     WRITE_UUID,
 )
@@ -47,7 +49,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SoFlowConfigEntry) -> bo
         hass, address, connectable=True
     )
     if not ble_device:
-        raise ConfigEntryNotReady(f"Could not find SoFlow Scooter with address {address}")
+        raise ConfigEntryNotReady(f"Could not find device with address {address}")
 
     # Establish connection
     try:
@@ -55,11 +57,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: SoFlowConfigEntry) -> bo
             BleakClient,
             ble_device,
             ble_device.address,
-            disconnected_callback=lambda _: _LOGGER.info("SoFlow Scooter disconnected"),
+            disconnected_callback=lambda _: _LOGGER.info("Device disconnected"),
             max_attempts=3,
         )
     except (BleakError, asyncio.TimeoutError) as ex:
-        raise ConfigEntryNotReady(f"Could not connect to SoFlow Scooter: {ex}") from ex
+        raise ConfigEntryNotReady(f"Could not connect: {ex}") from ex
 
     # Authenticate with the scooter
     try:
@@ -67,10 +69,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: SoFlowConfigEntry) -> bo
             client.write_gatt_char(WRITE_UUID, auth_packet, response=False),
             timeout=DEVICE_TIMEOUT,
         )
-        _LOGGER.debug("Authentication packet sent to SoFlow Scooter")
+        _LOGGER.debug("Authentication packet sent")
     except (BleakError, asyncio.TimeoutError) as ex:
         await client.disconnect()
-        raise ConfigEntryNotReady(f"Failed to authenticate with SoFlow Scooter: {ex}") from ex
+        raise ConfigEntryNotReady(f"Failed to authenticate: {ex}") from ex
 
     # Store runtime data
     entry.runtime_data = SoFlowData(
@@ -86,16 +88,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: SoFlowConfigEntry) -> bo
         """Handle notifications from the scooter."""
         if len(data) >= 9:
             lock_status_byte = data[8]
-            from .const import LOCK_STATUS_LOCKED, LOCK_STATUS_UNLOCKED
 
             if lock_status_byte == LOCK_STATUS_UNLOCKED:
                 entry.runtime_data.is_locked = False
-                _LOGGER.debug("SoFlow Scooter status: Unlocked")
+                _LOGGER.debug("Status: Unlocked")
             elif lock_status_byte == LOCK_STATUS_LOCKED:
                 entry.runtime_data.is_locked = True
-                _LOGGER.debug("SoFlow Scooter status: Locked")
+                _LOGGER.debug("Status: Locked")
             else:
-                _LOGGER.debug("SoFlow Scooter status: Unknown (%02X)", lock_status_byte)
+                _LOGGER.debug("Status: Unknown (%02X)", lock_status_byte)
 
             # Trigger entity state update
             hass.bus.async_fire(
@@ -105,7 +106,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SoFlowConfigEntry) -> bo
 
     try:
         await client.start_notify(NOTIFY_UUID, _notification_handler)
-        _LOGGER.debug("Notifications enabled for SoFlow Scooter")
+        _LOGGER.debug("Notifications enabled")
     except BleakError as ex:
         _LOGGER.warning("Failed to enable notifications: %s", ex)
 
@@ -119,9 +120,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: SoFlowConfigEntry) -> bo
         try:
             if client.is_connected:
                 await client.disconnect()
-                _LOGGER.info("SoFlow Scooter disconnected")
-        except Exception as ex:  # noqa: BLE001
-            _LOGGER.error("Error disconnecting SoFlow Scooter: %s", ex)
+                _LOGGER.info("Disconnected")
+        except Exception:
+            _LOGGER.exception("Error disconnecting")
 
     entry.async_on_unload(
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_shutdown)
@@ -137,5 +138,5 @@ async def async_unload_entry(hass: HomeAssistant, entry: SoFlowConfigEntry) -> b
         client = entry.runtime_data.client
         if client.is_connected:
             await client.disconnect()
-            _LOGGER.info("SoFlow Scooter disconnected")
+            _LOGGER.info("Disconnected")
     return unload_ok
