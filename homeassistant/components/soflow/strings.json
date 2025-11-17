@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Select SoFlow Scooter",
+        "description": "Select your SoFlow Scooter from the list of discovered devices.",
+        "data": {
+          "address": "Device"
+        }
+      },
+      "packets": {
+        "title": "Configure authentication packets",
+        "description": "Enter the authentication, lock, and unlock packets for your scooter. These packets are specific to your device.",
+        "data": {
+          "auth_packet": "Authentication packet (hex)",
+          "lock_packet": "Lock packet (hex)",
+          "unlock_packet": "Unlock packet (hex)"
+        }
+      }
+    },
+    "error": {
+      "no_devices_found": "No SoFlow Scooters found. Make sure your scooter is powered on and in range.",
+      "cannot_connect": "Failed to connect to the scooter. Make sure it is powered on and in range.",
+      "invalid_packet_format": "Invalid packet format. Please enter valid hexadecimal strings.",
+      "unknown": "An unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This device is already configured.",
+      "no_devices_found": "No SoFlow Scooters found. Make sure your scooter is powered on and in range."
+    }
+  }
+}
